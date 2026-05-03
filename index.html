@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Web3 Mini Toolkit</title>
+  <style>
+    :root {
+      --bg-1: #f5efe2;
+      --bg-2: #fdfaf2;
+      --ink: #1f2430;
+      --ink-soft: #5d667a;
+      --accent: #0f766e;
+      --accent-2: #0b5f59;
+      --error: #b42318;
+      --ok: #087443;
+      --card: #fff9ee;
+      --line: #ddd3bf;
+      --shadow: 0 16px 40px rgba(31, 36, 48, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1000px 500px at -10% -10%, #ffe9ba 0%, rgba(255, 233, 186, 0) 65%),
+        radial-gradient(900px 420px at 110% 110%, #d9f8f4 0%, rgba(217, 248, 244, 0) 60%),
+        linear-gradient(145deg, var(--bg-1), var(--bg-2));
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: min(680px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.78));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 24px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(120deg, rgba(15, 118, 110, 0.1), rgba(255, 255, 255, 0.35));
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2.5vw, 1.8rem);
+      letter-spacing: 0.02em;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+    }
+
+    .body {
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+    }
+
+    @media (min-width: 640px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    label {
+      font-size: 0.86rem;
+      color: var(--ink-soft);
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font: inherit;
+      background: #fffef9;
+      color: var(--ink);
+    }
+
+    input:focus {
+      outline: 2px solid rgba(15, 118, 110, 0.25);
+      border-color: var(--accent);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 16px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+    }
+
+    .btn-connect {
+      background: #111827;
+      color: #ffffff;
+    }
+
+    .btn-send {
+      background: linear-gradient(100deg, var(--accent), var(--accent-2));
+      color: #ffffff;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .status-line {
+      font-size: 0.95rem;
+      word-break: break-word;
+    }
+
+    .status-muted {
+      color: var(--ink-soft);
+    }
+
+    .status-ok {
+      color: var(--ok);
+      font-weight: 600;
+    }
+
+    .status-error {
+      color: var(--error);
+      font-weight: 600;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.84rem;
+    }
+
+    .note {
+      font-size: 0.84rem;
+      color: var(--ink-soft);
+      line-height: 1.5;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-live="polite">
+    <header class="header">
+      <h1>Web3 Mini Toolkit</h1>
+      <div class="subtitle">Connect MetaMask and send ETH with ethers.js</div>
+    </header>
+
+    <section class="body">
+      <div class="grid">
+        <div class="field">
+          <label for="recipient">Recipient Address</label>
+          <input id="recipient" type="text" placeholder="0x..." autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="amount">Amount (ETH)</label>
+          <input id="amount" type="number" min="0" step="0.0001" placeholder="0.01" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="connectButton" class="btn-connect" type="button">Connect Wallet</button>
+        <button id="sendButton" class="btn-send" type="button" disabled>Send ETH</button>
+      </div>
+
+      <div class="card">
+        <div id="status" class="status-line status-muted">Wallet is not connected.</div>
+        <div id="wallet" class="status-line mono status-muted">Account: -</div>
+        <div id="network" class="status-line mono status-muted">Network: -</div>
+        <div id="tx"></div>
+      </div>
+
+      <div class="note">
+        Safety note: test on a testnet first. Do not send real value until you confirm recipient and amount.
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js" defer></script>
+  <script>
+    const connectButton = document.getElementById("connectButton");
+    const sendButton = document.getElementById("sendButton");
+    const recipientInput = document.getElementById("recipient");
+    const amountInput = document.getElementById("amount");
+    const statusEl = document.getElementById("status");
+    const walletEl = document.getElementById("wallet");
+    const networkEl = document.getElementById("network");
+    const txEl = document.getElementById("tx");
+
+    let provider = null;
+    let signer = null;
+    let selectedAccount = "";
+    let chainId = null;
+
+    const STATUS = {
+      muted: "status-line status-muted",
+      ok: "status-line status-ok",
+      error: "status-line status-error"
+    };
+
+    function setStatus(message, type = "muted") {
+      statusEl.textContent = message;
+      statusEl.className = STATUS[type] || STATUS.muted;
+    }
+
+    function clearTxInfo() {
+      txEl.innerHTML = "";
+    }
+
+    function setWallet(account) {
+      walletEl.textContent = account ? "Account: " + account : "Account: -";
+      walletEl.className = "status-line mono " + (account ? "status-ok" : "status-muted");
+    }
+
+    function setNetworkLabel(id) {
+      if (!id) {
+        networkEl.textContent = "Network: -";
+        networkEl.className = "status-line mono status-muted";
+        return;
+      }
+
+      const map = {
+        1: "Ethereum Mainnet",
+        11155111: "Sepolia",
+        5: "Goerli",
+        137: "Polygon",
+        10: "Optimism",
+        42161: "Arbitrum One"
+      };
+
+      const label = map[Number(id)] || "Chain " + id;
+      networkEl.textContent = "Network: " + label + " (" + id + ")";
+      networkEl.className = "status-line mono status-muted";
+    }
+
+    function resetConnectionState() {
+      signer = null;
+      selectedAccount = "";
+      sendButton.disabled = true;
+      setWallet("");
+      clearTxInfo();
+      setStatus("Wallet is not connected.", "muted");
+    }
+
+    function validateInputs() {
+      const recipient = recipientInput.value.trim();
+      const amountRaw = amountInput.value.trim();
+
+      if (!window.ethers || !ethers.isAddress(recipient)) {
+        return { ok: false, message: "Enter a valid recipient address." };
+      }
+
+      if (!amountRaw || Number(amountRaw) <= 0) {
+        return { ok: false, message: "Amount must be greater than 0." };
+      }
+
+      try {
+        const parsed = ethers.parseEther(amountRaw);
+        if (parsed <= 0n) {
+          return { ok: false, message: "Amount must be greater than 0." };
+        }
+      } catch (error) {
+        return { ok: false, message: "Enter a valid ETH amount." };
+      }
+
+      return { ok: true };
+    }
+
+    async function refreshNetwork() {
+      if (!provider) {
+        return;
+      }
+      const network = await provider.getNetwork();
+      chainId = Number(network.chainId);
+      setNetworkLabel(chainId);
+    }
+
+    async function connectWallet() {
+      if (!window.ethereum) {
+        setStatus("MetaMask not detected. Install the extension to continue.", "error");
+        return;
+      }
+
+      if (!window.ethers) {
+        setStatus("ethers.js did not load. Refresh and try again.", "error");
+        return;
+      }
+
+      connectButton.disabled = true;
+      clearTxInfo();
+      setStatus("Waiting for wallet approval...", "muted");
+
+      try {
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+        selectedAccount = await signer.getAddress();
+
+        setWallet(selectedAccount);
+        await refreshNetwork();
+        sendButton.disabled = false;
+        setStatus("Wallet connected. Enter recipient and amount.", "ok");
+      } catch (error) {
+        const message = error && error.code === 4001
+          ? "Connection request was rejected in MetaMask."
+          : "Failed to connect wallet. Check MetaMask and try again.";
+        resetConnectionState();
+        setStatus(message, "error");
+      } finally {
+        connectButton.disabled = false;
+      }
+    }
+
+    function chainExplorerBase(currentChainId) {
+      if (currentChainId === 1) return "https://etherscan.io/tx/";
+      if (currentChainId === 11155111) return "https://sepolia.etherscan.io/tx/";
+      if (currentChainId === 137) return "https://polygonscan.com/tx/";
+      if (currentChainId === 10) return "https://optimistic.etherscan.io/tx/";
+      if (currentChainId === 42161) return "https://arbiscan.io/tx/";
+      return "";
+    }
+
+    async function sendEth() {
+      clearTxInfo();
+
+      if (!signer) {
+        setStatus("Connect your wallet before sending ETH.", "error");
+        return;
+      }
+
+      const validation = validateInputs();
+      if (!validation.ok) {
+        setStatus(validation.message, "error");
+        return;
+      }
+
+      const recipient = recipientInput.value.trim();
+      const amountRaw = amountInput.value.trim();
+
+      sendButton.disabled = true;
+      setStatus("Awaiting signature in MetaMask...", "muted");
+
+      try {
+        const tx = await signer.sendTransaction({
+          to: recipient,
+          value: ethers.parseEther(amountRaw)
+        });
+
+        setStatus("Transaction sent. Waiting for confirmation...", "muted");
+        const receipt = await tx.wait();
+
+        const explorer = chainExplorerBase(chainId);
+        if (explorer) {
+          txEl.innerHTML =
+            "<a target=\"_blank\" rel=\"noreferrer\" href=\"" + explorer + tx.hash + "\">" +
+            "View transaction: " + tx.hash +
+            "</a>";
+        } else {
+          txEl.textContent = "Transaction hash: " + tx.hash;
+          txEl.className = "status-line mono status-muted";
+        }
+
+        setStatus("Transaction confirmed in block " + receipt.blockNumber + ".", "ok");
+      } catch (error) {
+        const message = error && error.code === 4001
+          ? "Transaction was rejected in MetaMask."
+          : "Transaction failed. Check balance, network, and recipient address.";
+        setStatus(message, "error");
+      } finally {
+        sendButton.disabled = false;
+      }
+    }
+
+    connectButton.addEventListener("click", connectWallet);
+    sendButton.addEventListener("click", sendEth);
+
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", function (accounts) {
+        clearTxInfo();
+
+        if (!accounts || accounts.length === 0) {
+          resetConnectionState();
+          return;
+        }
+
+        selectedAccount = accounts[0];
+        setWallet(selectedAccount);
+        sendButton.disabled = false;
+        setStatus("Active wallet account changed.", "muted");
+      });
+
+      window.ethereum.on("chainChanged", function () {
+        // MetaMask recommends reloading DApps on chain change to avoid stale state.
+        window.location.reload();
+      });
+    }
+  </script>
+</body>
+</html>
