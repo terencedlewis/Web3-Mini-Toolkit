@@ -222,6 +222,52 @@
       text-align: center;
       letter-spacing: 0.01em;
     }
+
+    .btn-nft {
+      background: linear-gradient(100deg, #b45309, #92400e);
+      color: #ffffff;
+    }
+
+    .nft-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .nft-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--card);
+      font-size: 0.8rem;
+      color: var(--ink-soft);
+    }
+
+    .nft-card img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block;
+      background: #e5e7eb;
+    }
+
+    .nft-card-label {
+      padding: 6px 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nft-placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
   </style>
 </head>
 <body>
@@ -282,6 +328,23 @@
       <div id="gatedContent" class="gated-content">
         🎉 You unlocked the secret page!
       </div>
+
+      <hr class="divider" />
+
+      <h3 style="margin: 4px 0 12px; font-size: 1.05rem; color: var(--ink);">NFT Viewer</h3>
+
+      <div class="gate-field">
+        <label for="alchemyKey">Alchemy API Key</label>
+        <input id="alchemyKey" type="text" placeholder="Paste your Alchemy API key" autocomplete="off" />
+      </div>
+
+      <div class="actions" style="margin-top: 8px;">
+        <button class="btn-nft" type="button" onclick="loadNFTs()">Load My NFTs</button>
+      </div>
+
+      <p id="nftStatus" class="status-line status-muted" style="margin: 0;"></p>
+
+      <div id="nftGrid" class="nft-grid"></div>
     </section>
   </main>
 
@@ -486,6 +549,109 @@
 
     connectButton.addEventListener("click", connectWallet);
     sendButton.addEventListener("click", sendEth);
+
+    // ── NFT Viewer ──────────────────────────────────────────────────────────
+    async function loadNFTs() {
+      const nftStatusEl = document.getElementById("nftStatus");
+      const nftGrid = document.getElementById("nftGrid");
+      const apiKey = document.getElementById("alchemyKey").value.trim();
+
+      nftGrid.innerHTML = "";
+
+      if (!signer || !selectedAccount) {
+        nftStatusEl.textContent = "Connect your wallet first.";
+        nftStatusEl.className = "status-line status-error";
+        return;
+      }
+
+      if (!apiKey) {
+        nftStatusEl.textContent = "Enter your Alchemy API key.";
+        nftStatusEl.className = "status-line status-error";
+        return;
+      }
+
+      const networkMap = {
+        1: "eth-mainnet",
+        11155111: "eth-sepolia",
+        137: "polygon-mainnet",
+        10: "opt-mainnet",
+        42161: "arb-mainnet",
+        8453: "base-mainnet"
+      };
+      const network = networkMap[chainId];
+
+      if (!network) {
+        nftStatusEl.textContent = "NFT viewer supports Mainnet, Sepolia, Polygon, Optimism, Arbitrum, and Base.";
+        nftStatusEl.className = "status-line status-error";
+        return;
+      }
+
+      nftStatusEl.textContent = "Fetching NFTs\u2026";
+      nftStatusEl.className = "status-line status-muted";
+
+      try {
+        const url = `https://${network}.g.alchemy.com/nft/v3/${apiKey}/getNFTsForOwner` +
+          `?owner=${selectedAccount}&withMetadata=true&pageSize=24`;
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Alchemy API error ${res.status}`);
+
+        const data = await res.json();
+        const nfts = data.ownedNfts || [];
+
+        if (nfts.length === 0) {
+          nftStatusEl.textContent = "No NFTs found for this wallet on " + network + ".";
+          nftStatusEl.className = "status-line status-muted";
+          return;
+        }
+
+        nftStatusEl.textContent = `Showing ${nfts.length} of ${data.totalCount} NFT${data.totalCount === 1 ? "" : "s"}.`;
+        nftStatusEl.className = "status-line status-ok";
+
+        nfts.forEach(function (nft) {
+          const name = nft.name ||
+            (nft.contract && nft.contract.name
+              ? nft.contract.name + " #" + nft.tokenId
+              : "#" + nft.tokenId);
+          const imageUrl = nft.image &&
+            (nft.image.cachedUrl || nft.image.thumbnailUrl || nft.image.originalUrl);
+
+          const card = document.createElement("div");
+          card.className = "nft-card";
+
+          if (imageUrl) {
+            const img = document.createElement("img");
+            img.alt = name;
+            img.loading = "lazy";
+            img.src = imageUrl;
+            img.onerror = function () {
+              const ph = document.createElement("div");
+              ph.className = "nft-placeholder";
+              ph.textContent = "\ud83d\uddbc\ufe0f";
+              img.replaceWith(ph);
+            };
+            card.appendChild(img);
+          } else {
+            const ph = document.createElement("div");
+            ph.className = "nft-placeholder";
+            ph.textContent = "\ud83d\uddbc\ufe0f";
+            card.appendChild(ph);
+          }
+
+          const label = document.createElement("div");
+          label.className = "nft-card-label";
+          label.title = name;
+          label.textContent = name;
+          card.appendChild(label);
+
+          nftGrid.appendChild(card);
+        });
+      } catch (err) {
+        nftStatusEl.textContent = "Failed to load NFTs. Check your API key and network connection.";
+        nftStatusEl.className = "status-line status-error";
+      }
+    }
+    // ── End NFT Viewer ────────────────────────────────────────────────────────
 
     // ── Token Gate ──────────────────────────────────────────────────────────
     const ERC20_ABI = [
