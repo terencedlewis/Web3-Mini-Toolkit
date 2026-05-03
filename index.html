@@ -355,7 +355,11 @@
         setWallet(selectedAccount);
         await refreshNetwork();
         sendButton.disabled = false;
-        setStatus("Wallet connected. Enter recipient and amount.", "ok");
+        if (chainId === 1) {
+          setStatus("Wallet connected on Mainnet. Double-check recipient and amount before sending.", "error");
+        } else {
+          setStatus("Wallet connected. Enter recipient and amount.", "ok");
+        }
       } catch (error) {
         const message = error && error.code === 4001
           ? "Connection request was rejected in MetaMask."
