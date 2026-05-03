@@ -193,6 +193,35 @@
     a:hover {
       text-decoration: underline;
     }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 4px 0;
+    }
+
+    .btn-gate {
+      background: linear-gradient(100deg, #6d28d9, #4c1d95);
+      color: #ffffff;
+    }
+
+    .gate-field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .gated-content {
+      display: none;
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      border: 1px solid #86efac;
+      border-radius: 12px;
+      padding: 18px 20px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--ok);
+      text-align: center;
+      letter-spacing: 0.01em;
+    }
   </style>
 </head>
 <body>
@@ -228,6 +257,30 @@
 
       <div class="note">
         Safety note: test on a testnet first. Do not send real value until you confirm recipient and amount.
+      </div>
+
+      <hr class="divider" />
+
+      <h3 style="margin: 4px 0 12px; font-size: 1.05rem; color: var(--ink);">Token Gate</h3>
+
+      <div class="gate-field">
+        <label for="tokenAddress">ERC-20 Token Contract Address</label>
+        <input id="tokenAddress" type="text" placeholder="0x..." autocomplete="off" />
+      </div>
+
+      <div class="gate-field" style="margin-top: 8px;">
+        <label for="minBalance">Minimum Balance Required</label>
+        <input id="minBalance" type="number" min="0" step="1" placeholder="1" />
+      </div>
+
+      <div class="actions" style="margin-top: 4px;">
+        <button class="btn-gate" type="button" onclick="checkAccess()">Check Access</button>
+      </div>
+
+      <p id="accessStatus" class="status-line status-muted" style="margin: 0;"></p>
+
+      <div id="gatedContent" class="gated-content">
+        🎉 You unlocked the secret page!
       </div>
     </section>
   </main>
@@ -433,6 +486,69 @@
 
     connectButton.addEventListener("click", connectWallet);
     sendButton.addEventListener("click", sendEth);
+
+    // ── Token Gate ──────────────────────────────────────────────────────────
+    const ERC20_ABI = [
+      "function balanceOf(address owner) view returns (uint256)",
+      "function decimals() view returns (uint8)",
+      "function symbol() view returns (string)"
+    ];
+
+    async function checkAccess() {
+      const accessEl = document.getElementById("accessStatus");
+      const gatedEl = document.getElementById("gatedContent");
+      const tokenAddress = document.getElementById("tokenAddress").value.trim();
+      const minRaw = document.getElementById("minBalance").value.trim();
+
+      gatedEl.style.display = "none";
+
+      if (!signer) {
+        accessEl.textContent = "Connect your wallet first.";
+        accessEl.className = "status-line status-error";
+        return;
+      }
+
+      if (!window.ethers || !ethers.isAddress(tokenAddress)) {
+        accessEl.textContent = "Enter a valid ERC-20 token contract address.";
+        accessEl.className = "status-line status-error";
+        return;
+      }
+
+      const minAmount = Number(minRaw);
+      if (!minRaw || isNaN(minAmount) || minAmount < 0) {
+        accessEl.textContent = "Enter a valid minimum balance (0 or more).";
+        accessEl.className = "status-line status-error";
+        return;
+      }
+
+      accessEl.textContent = "Checking token balance\u2026";
+      accessEl.className = "status-line status-muted";
+
+      try {
+        const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+        const [rawBalance, decimals, symbol] = await Promise.all([
+          contract.balanceOf(selectedAccount),
+          contract.decimals(),
+          contract.symbol()
+        ]);
+
+        const balance = Number(ethers.formatUnits(rawBalance, decimals));
+        const threshold = minAmount;
+
+        if (balance >= threshold) {
+          accessEl.textContent = `Access granted \u2014 you hold ${balance.toLocaleString()} ${symbol} (need \u2265 ${threshold.toLocaleString()}).`;
+          accessEl.className = "status-line status-ok";
+          gatedEl.style.display = "block";
+        } else {
+          accessEl.textContent = `Access denied \u2014 you hold ${balance.toLocaleString()} ${symbol} (need \u2265 ${threshold.toLocaleString()}).`;
+          accessEl.className = "status-line status-error";
+        }
+      } catch (err) {
+        accessEl.textContent = "Could not read token balance. Check the contract address and network.";
+        accessEl.className = "status-line status-error";
+      }
+    }
+    // ── End Token Gate ───────────────────────────────────────────────────────
 
     if (window.ethereum) {
       window.ethereum.on("accountsChanged", function (accounts) {
